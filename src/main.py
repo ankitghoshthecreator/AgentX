@@ -30,10 +30,17 @@ def main():
     # CLI command
     cli_parser = subparsers.add_parser("cli", help="Start interactive CLI")
     
+    # API command
+    api_parser = subparsers.add_parser("api", help="Start the FastAPI server")
+    api_parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
+    
     args = parser.parse_args()
     
     if args.command == "query":
         query_command(args.text)
+    elif args.command == "api":
+        from src.api.server import start_server
+        start_server(port=args.port)
     elif args.command == "cli":
         print("Agent-as-Database Interactive CLI")
         print("Type 'exit' or 'quit' to stop.")
