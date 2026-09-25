@@ -1,0 +1,219 @@
+# ============================================================================
+# AGENT-AS-DATABASE: SEMANTIC KNOWLEDGE GRAPH QUERY ENGINE
+# Requirements.txt - All dependencies and frameworks
+# ============================================================================
+
+# Python version: 3.10+
+
+# ============================================================================
+# CORE AGENT FRAMEWORK
+# ============================================================================
+google-agentool==0.1.0  # Google Agent Development Kit (ADK)
+google-ai-generativelanguage==0.4.2  # Google AI API client
+
+# ============================================================================
+# LLM & EMBEDDINGS
+# ============================================================================
+sentence-transformers==2.2.2  # Semantic embeddings (768-dim, all-MiniLM-L6-v2)
+openai==1.3.0  # OpenAI API (fallback embeddings)
+anthropic==0.7.0  # Anthropic Claude API (reasoning fallback)
+
+# ============================================================================
+# WEB SEARCH & DATA RETRIEVAL
+# ============================================================================
+requests==2.31.0  # HTTP client for APIs
+beautifulsoup4==4.12.2  # HTML parsing
+lxml==4.9.3  # XML/HTML parsing
+google-api-python-client==2.101.0  # Google Search API client
+PyGithub==2.1.1  # GitHub API client
+feedparser==6.0.10  # RSS/Atom feed parsing
+
+# ============================================================================
+# KNOWLEDGE GRAPH & DATA STRUCTURES
+# ============================================================================
+networkx==3.2  # Graph data structure
+numpy==1.24.3  # Numerical computing
+pandas==2.0.3  # Data manipulation
+
+# ============================================================================
+# CACHING & STORAGE
+# ============================================================================
+redis==5.0.0  # Redis Python client (semantic cache)
+pydantic==2.0.0  # Data validation (Pydantic v2)
+pydantic-settings==2.0.0  # Config management
+
+# ============================================================================
+# MACHINE LEARNING & METRICS
+# ============================================================================
+scikit-learn==1.3.0  # Policy model (tool selection), metrics
+joblib==1.3.0  # Model persistence + parallelization
+scipy==1.11.0  # Scientific computing (similarity metrics)
+
+# ============================================================================
+# NATURAL LANGUAGE PROCESSING
+# ============================================================================
+spacy==3.6.0  # NLP for entity extraction
+nltk==3.8.1  # Natural language toolkit
+
+# ============================================================================
+# ASYNC & CONCURRENCY
+# ============================================================================
+asyncio-contextmanager==1.0.0  # Async context managers
+aiohttp==3.8.5  # Async HTTP client
+python-multipart==0.0.6  # Form data parsing
+
+# ============================================================================
+# DATA VALIDATION & SERIALIZATION
+# ============================================================================
+jsonschema==4.19.0  # JSON schema validation
+pyyaml==6.0.1  # YAML configuration files
+marshmallow==3.19.0  # Object serialization
+
+# ============================================================================
+# MONITORING & OBSERVABILITY
+# ============================================================================
+streamlit==1.28.0  # Dashboard visualization
+plotly==5.16.0  # Interactive charts (Plotly graphs)
+prometheus-client==0.17.1  # Prometheus metrics (optional)
+
+# ============================================================================
+# LOGGING & TRACING
+# ============================================================================
+python-json-logger==2.0.7  # Structured JSON logging
+pyOpenSSL==23.2.0  # SSL/TLS support
+
+# ============================================================================
+# API & WEB FRAMEWORK (Optional, for FastAPI deployment)
+# ============================================================================
+fastapi==0.104.0  # Fast web API framework
+uvicorn==0.23.0  # ASGI server for FastAPI
+pydantic-extra-types==2.1.0  # Extra Pydantic types
+python-dotenv==1.0.0  # Environment variable management
+
+# ============================================================================
+# TESTING & DEVELOPMENT
+# ============================================================================
+pytest==7.4.0  # Testing framework
+pytest-cov==4.1.0  # Coverage reporting
+pytest-asyncio==0.21.0  # Async test support
+pytest-timeout==2.1.0  # Timeout for hanging tests
+pytest-mock==3.11.1  # Mocking support
+responses==0.23.3  # Mock HTTP responses
+
+# ============================================================================
+# CODE QUALITY & LINTING
+# ============================================================================
+black==23.9.0  # Code formatter
+flake8==6.0.0  # Code linter
+isort==5.12.0  # Import sorting
+mypy==1.5.0  # Static type checker
+pylint==2.17.0  # Code analysis
+
+# ============================================================================
+# DOCUMENTATION & TYPE HINTS
+# ============================================================================
+sphinx==7.1.0  # Documentation generator
+sphinx-rtd-theme==1.3.0  # ReadTheDocs theme
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+python-dateutil==2.8.2  # Date utilities
+pytz==2023.3  # Timezone support
+uuid==1.30  # UUID generation
+click==8.1.0  # CLI framework
+tqdm==4.66.0  # Progress bars
+colorama==0.4.6  # Colored terminal output
+
+# ============================================================================
+# DEPLOYMENT
+# ============================================================================
+gunicorn==21.2.0  # WSGI HTTP Server
+psycopg2-binary==2.9.9  # PostgreSQL adapter (for future use)
+
+# ============================================================================
+# OPTIONAL: Advanced Features (Production)
+# ============================================================================
+# sqlalchemy==2.0.0  # ORM for database
+# alembic==1.12.0  # Database migrations
+# kafka-python==2.0.2  # Apache Kafka for streaming
+# airflow==2.7.0  # Workflow orchestration
+# dbt==1.7.0  # Data transformation
+
+# ============================================================================
+# NOTE ON VERSIONS
+# ============================================================================
+# - All versions pinned to specific releases for reproducibility
+# - Google ADK (0.1.0) is current as of Sep 2026
+# - sentence-transformers uses all-MiniLM-L6-v2 model
+# - Redis requires instance running on localhost:6379 or REDIS_URL
+# - Pydantic v2 requires migration from v1 if upgrading existing projects
+# - For development, also install: requirements-dev.txt
+
+# ============================================================================
+# INSTALLATION
+# ============================================================================
+# pip install -r requirements.txt
+# 
+# For development:
+# pip install -r requirements.txt -r requirements-dev.txt
+# 
+# For minimal (without dashboard/API):
+# pip install google-agentool sentence-transformers redis networkx \
+#   pydantic scikit-learn spacy requests beautifulsoup4 PyGithub
+
+# ============================================================================
+# ENVIRONMENT SETUP
+# ============================================================================
+# 1. Create .env from .env.example:
+#    cp .env.example .env
+#
+# 2. Set required API keys:
+#    - GOOGLE_SEARCH_API_KEY (from Google Cloud Console)
+#    - GITHUB_TOKEN (from GitHub Settings → Developer settings)
+#    - OPENAI_API_KEY (optional, for fallback embeddings)
+#
+# 3. Start Redis:
+#    redis-server (or docker run -d -p 6379:6379 redis:7)
+#
+# 4. Download spaCy model:
+#    python -m spacy download en_core_web_sm
+#
+# 5. Run tests:
+#    pytest tests/ -v
+#
+# 6. Start agent:
+#    python -m src.main query "Your query here"
+#
+# 7. Start dashboard:
+#    streamlit run src/dashboard/app.py
+
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+#
+# Issue: sentence-transformers download fails
+# Fix: export HF_HOME=/path/to/cache (huggingface models cache)
+#
+# Issue: Redis connection refused
+# Fix: redis-server must be running: redis-cli PING
+#
+# Issue: spaCy model not found
+# Fix: python -m spacy download en_core_web_sm
+#
+# Issue: Google API 403
+# Fix: Verify GOOGLE_SEARCH_API_KEY in .env
+#
+# Issue: GitHub API rate limit
+# Fix: Use GITHUB_TOKEN for authenticated requests (5000/hr vs 60/hr)
+
+# ============================================================================
+# SECURITY NOTES
+# ============================================================================
+# - Never commit .env to version control
+# - Use secrets manager for production deployment
+# - Rotate API keys regularly
+# - Monitor Redis for unauthorized access
+# - Use environment-specific configs
+
+# ============================================================================
