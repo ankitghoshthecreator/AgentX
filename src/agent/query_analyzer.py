@@ -45,30 +45,55 @@ class QueryAnalyzer:
         )
 
     def extract_entities(self, query: str) -> List[Entity]:
-        """Extract named entities and domain-specific keywords."""
+        """
+        Extract named entities and domain-specific keywords.
+        Uses SpaCy NER first, then noun-chunk fallback to ensure
+        non-empty entity lists for any well-formed query.
+        """
         entities = []
-        tech_keywords = ["vllm", "ollama", "llama.cpp", "gpu", "nvidia", "amd", "metal", "cuda"]
-        
+        seen = set()
+        hardware_kw = {"gpu", "nvidia", "amd", "metal", "cuda", "tpu", "cpu"}
+
         if self.nlp:
             doc = self.nlp(query)
+
+            # 1. Named Entity Recognition
             for ent in doc.ents:
-                entities.append(Entity(name=ent.text, type=ent.label_.lower()))
-                
-            # Domain specific extraction fallback
+                key = ent.text.lower()
+                if key not in seen:
+                    seen.add(key)
+                    entities.append(Entity(name=ent.text, type=ent.label_.lower()))
+
+            # 2. Token-level tech keyword scan
             for token in doc:
-                text_lower = token.text.lower()
-                if text_lower in tech_keywords and not any(e.name.lower() == text_lower for e in entities):
-                    ent_type = "hardware" if text_lower in ["gpu", "nvidia", "amd", "metal", "cuda"] else "framework"
-                    entities.append(Entity(name=token.text, type=ent_type))
+                key = token.text.lower()
+                if key not in seen:
+                    if key in hardware_kw:
+                        seen.add(key)
+                        entities.append(Entity(name=token.text, type="hardware"))
+
+            # 3. Noun-chunk fallback — catches "Redis", "Memcached", "vLLM" etc.
+            #    Only activates when NER found nothing useful.
+            if not entities:
+                stop_words = {"what", "how", "does", "is", "are", "the", "a", "an",
+                              "and", "or", "for", "to", "of", "in", "on", "at",
+                              "compare", "difference", "between", "vs", "versus",
+                              "tell", "me", "about", "explain", "use", "used",
+                              "with", "from", "than", "that", "this"}
+                for chunk in doc.noun_chunks:
+                    key = chunk.root.text.lower()
+                    if key not in stop_words and key not in seen and len(key) > 2:
+                        seen.add(key)
+                        entities.append(Entity(name=chunk.root.text, type="concept"))
         else:
-            # Simple fallback
-            words = query.split()
-            for w in words:
-                clean_w = w.strip(",.?!").lower()
-                if clean_w in tech_keywords:
-                    ent_type = "hardware" if clean_w in ["gpu", "nvidia", "amd", "metal", "cuda"] else "framework"
-                    entities.append(Entity(name=w, type=ent_type))
-                    
+            # No SpaCy — basic whitespace tokeniser
+            for w in query.split():
+                clean = w.strip(",.?!").lower()
+                if len(clean) > 3 and clean not in seen:
+                    seen.add(clean)
+                    entities.append(Entity(name=w.strip(",.?!"), type="concept"))
+
+        logger.debug(f"Extracted {len(entities)} entities: {[e.name for e in entities]}")
         return entities
 
     def extract_relationships(self, query: str) -> List[Relationship]:
