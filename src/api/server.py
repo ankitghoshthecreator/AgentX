@@ -39,10 +39,11 @@ async def process_query(request: QueryRequest, credentials: HTTPAuthorizationCre
     try:
         # 1. Verify token
         user = verify_token(credentials.credentials)
-        logger.info(f"User '{user}' requested query: {request.query}")
+        tenant_id = f"tenant_{user}"
+        logger.info(f"User '{user}' (Tenant: {tenant_id}) requested query: {request.query}")
         
         # 2. Execute agent orchestrator
-        result = orchestrator.process_query(request.query)
+        result = orchestrator.process_query(request.query, tenant_id=tenant_id)
         return result
     except HTTPException:
         raise

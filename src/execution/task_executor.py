@@ -1,80 +1,121 @@
 import time
 import logging
-from typing import Dict, Any
-from ..agent.types import TaskDAG, Task
+import requests
+import re
+import urllib.parse
+from typing import Dict, Any, Callable
 
 logger = logging.getLogger(__name__)
 
 class TaskExecutor:
-    """Executes tasks with timeout, retry logic, and fallback capabilities."""
-    
+    """Executes tasks with a dynamic tool registry, retries, and fallback support."""
+
     def __init__(self):
-        self.tools = {
-            "web_search": self._mock_web_search,
-            "github_api": self._mock_github_api,
-            "semantic_extract": self._mock_semantic_extract
-        }
-        logger.info("TaskExecutor initialized with available tools.")
+        self.tools: Dict[str, Callable] = {}
+        self.register_tool("web_search", self._wikipedia_search)
+        self.register_tool("duckduckgo_search", self._duckduckgo_search)
+        self.register_tool("github_api", self._mock_github_api)
+        self.register_tool("semantic_extract", self._mock_semantic_extract)
+        logger.info("TaskExecutor initialized with extensible tool registry.")
 
-    def _mock_web_search(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Mock web search tool execution."""
-        time.sleep(1) # simulate network call
-        return {"results": [f"Mock search result for {inputs.get('query')}"]}
-        
-    def _mock_github_api(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Mock github API tool execution."""
-        time.sleep(0.5)
-        return {"stars": 1000, "description": f"Mock repo data for {inputs.get('query')}"}
+    def register_tool(self, tool_name: str, executable: Callable):
+        """Register any callable as a named tool (supports MCP integration in Phase 3)."""
+        self.tools[tool_name] = executable
+        logger.debug(f"Tool registered: {tool_name}")
 
-    def _mock_semantic_extract(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Mock semantic extraction tool execution."""
-        time.sleep(0.5)
-        return {"extracted": f"Mock extracted capabilities for {inputs.get('entities')}"}
-
-    def execute_task(self, task: Task) -> Dict[str, Any]:
-        """Execute a single task with retries."""
-        logger.info(f"Executing task {task.task_id}: {task.description} using '{task.tool}'")
-        
-        if task.tool not in self.tools:
-            logger.warning(f"Tool '{task.tool}' not found.")
-            if task.fallback_tool and task.fallback_tool in self.tools:
-                logger.info(f"Using fallback tool '{task.fallback_tool}' for task {task.task_id}")
-                task.tool = task.fallback_tool
-            else:
-                return {"error": f"Tool '{task.tool}' missing and no fallback available"}
-            
+    # ── Real Tool: Wikipedia Search ────────────────────────────────────────────
+    def _wikipedia_search(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        query = inputs.get('query', '')
         try:
-            # Execute tool (in production, run in async loop or separate worker process)
-            result = self.tools[task.tool](task.inputs)
-            logger.debug(f"Task {task.task_id} completed successfully.")
+            logger.info(f"Wikipedia search: {query}")
+            safe_query = urllib.parse.quote(query)
+            url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={safe_query}&utf8=&format=json"
+            headers = {'User-Agent': 'AgentAsDatabase/2.0 (research-agent)'}
+            response = requests.get(url, headers=headers, timeout=6)
+            if response.status_code != 200:
+                return {"error": f"Wikipedia HTTP {response.status_code}", "source": "wikipedia"}
+            data = response.json()
+            hits = data.get('query', {}).get('search', [])
+            if hits:
+                snippet = re.sub('<[^<]+>', '', hits[0]['snippet'])
+                return {"results": [snippet], "source": "wikipedia", "title": hits[0].get('title', '')}
+            return {"results": ["No results found."], "source": "wikipedia"}
+        except Exception as e:
+            return {"error": str(e), "source": "wikipedia"}
+
+    # ── Real Tool: DuckDuckGo Instant Answer ──────────────────────────────────
+    def _duckduckgo_search(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        query = inputs.get('query', '')
+        try:
+            logger.info(f"DuckDuckGo search: {query}")
+            safe_query = urllib.parse.quote(query)
+            url = f"https://api.duckduckgo.com/?q={safe_query}&format=json&no_html=1&skip_disambig=1"
+            headers = {'User-Agent': 'AgentAsDatabase/2.0'}
+            response = requests.get(url, headers=headers, timeout=6)
+            if response.status_code != 200:
+                return {"error": f"DuckDuckGo HTTP {response.status_code}", "source": "duckduckgo"}
+            data = response.json()
+            abstract = data.get('AbstractText', '')
+            answer = data.get('Answer', '')
+            result = abstract or answer or "No instant answer available."
+            return {"results": [result], "source": "duckduckgo", "type": data.get('Type', '')}
+        except Exception as e:
+            return {"error": str(e), "source": "duckduckgo"}
+
+    # ── Mock Tool: GitHub API ─────────────────────────────────────────────────
+    def _mock_github_api(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        time.sleep(0.15)
+        return {
+            "stars": 12400,
+            "forks": 1800,
+            "open_issues": 234,
+            "description": f"Repository data for {inputs.get('query')}",
+            "source": "github_mock"
+        }
+
+    # ── Mock Tool: Semantic Extract ───────────────────────────────────────────
+    def _mock_semantic_extract(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        time.sleep(0.15)
+        entities = inputs.get('entities', [])
+        return {
+            "extracted": f"Comparative semantic properties extracted for: {', '.join(entities)}",
+            "source": "semantic_extract"
+        }
+
+    # ── Execution ─────────────────────────────────────────────────────────────
+    def execute_task(self, task) -> Dict[str, Any]:
+        logger.info(f"Executing [{task.task_id}] '{task.description}' using tool='{task.tool}'")
+        
+        active_tool = task.tool
+        if active_tool not in self.tools:
+            if task.fallback_tool and task.fallback_tool in self.tools:
+                logger.warning(f"Tool '{active_tool}' not found. Using fallback '{task.fallback_tool}'.")
+                active_tool = task.fallback_tool
+            else:
+                return {"error": f"Tool '{active_tool}' not registered and no fallback available."}
+
+        try:
+            result = self.tools[active_tool](task.inputs)
+            if "error" in result:
+                logger.warning(f"Task [{task.task_id}] tool returned error: {result['error']}")
             return result
         except Exception as e:
-            logger.error(f"Task {task.task_id} failed with error: {e}")
             if task.retry_count < task.max_retries:
                 task.retry_count += 1
-                # Exponential backoff
-                time.sleep(1 * (2 ** task.retry_count)) 
-                logger.info(f"Retrying task {task.task_id} (Attempt {task.retry_count}/{task.max_retries})")
+                backoff = 0.5 * (2 ** task.retry_count)
+                logger.warning(f"Retrying [{task.task_id}] in {backoff:.1f}s (attempt {task.retry_count}/{task.max_retries})")
+                time.sleep(backoff)
                 return self.execute_task(task)
-            return {"error": str(e), "status": "failed"}
+            logger.error(f"Task [{task.task_id}] permanently failed: {e}")
+            return {"error": str(e), "status": "permanently_failed"}
 
-    def execute_plan(self, plan: TaskDAG) -> Dict[str, Any]:
-        """Execute all tasks in a plan DAG, respecting dependencies."""
+    def execute_plan(self, plan) -> Dict[str, Any]:
         results = {}
-        sorted_tasks = plan.topological_sort()
-        
-        # Parallel execution can be achieved here with asyncio
-        # Doing sequentially for MVP
-        for task in sorted_tasks:
-            # Check dependencies
-            deps_met = all(dep in results and "error" not in results[dep] for dep in task.dependencies)
-            
-            if not deps_met and len(task.dependencies) > 0:
-                logger.error(f"Dependencies not met for task {task.task_id}. Skipping.")
-                results[task.task_id] = {"error": "Dependencies failed"}
+        for task in plan.topological_sort():
+            deps_ok = all(dep in results and "error" not in results[dep] for dep in task.dependencies)
+            if task.dependencies and not deps_ok:
+                logger.error(f"Skipping [{task.task_id}]: dependencies not met.")
+                results[task.task_id] = {"error": "Dependency failed upstream"}
                 continue
-                
-            task_result = self.execute_task(task)
-            results[task.task_id] = task_result
-            
+            results[task.task_id] = self.execute_task(task)
         return results
