@@ -1,0 +1,234 @@
+graph TB
+    subgraph "🎯 User Interface"
+        CLI["CLI Interface<br/>python -m src.main query"]
+        API["FastAPI<br/>POST /query"]
+        UI["Streamlit<br/>Interactive UI"]
+    end
+    
+    CLI --> Core
+    API --> Core
+    UI --> Core
+    
+    subgraph "🧠 Core Agent System"
+        subgraph "Input Layer"
+            QA["Query Analyzer<br/>─────<br/>spaCy + embeddings"]
+            QA1["Extract Entities"]
+            QA2["Extract Relationships"]
+            QA3["Generate Embedding<br/>768-dim"]
+        end
+        
+        subgraph "Caching Layer"
+            Cache["Semantic Cache<br/>─────<br/>Redis + in-memory"]
+            Cache1["Query Similarity<br/>Threshold: 0.75"]
+            Cache2["TTL Management<br/>24h default"]
+            Cache3["Hit/Miss/Partial<br/>Classification"]
+        end
+        
+        subgraph "Planning Layer"
+            Planner["ADK Query Planner<br/>─────<br/>Google Agent Kit"]
+            Planner1["Task DAG<br/>Generation"]
+            Planner2["Dependency<br/>Resolution"]
+            Planner3["Cost Estimation"]
+        end
+        
+        subgraph "Selection Layer"
+            Selector["Adaptive Tool Selector<br/>─────<br/>scikit-learn"]
+            Selector1["Policy Model<br/>P(tool useful)"]
+            Selector2["Learn from<br/>Traces"]
+            Selector3["Retrain<br/>Every 50 queries"]
+        end
+        
+        subgraph "Execution Layer"
+            Executor["Task Executor<br/>─────<br/>asyncio + pydantic"]
+            Executor1["Parallel Execution<br/>max 5 concurrent"]
+            Executor2["Timeout Handling<br/>5000ms default"]
+            Executor3["Retry Logic<br/>Exponential backoff"]
+            Executor4["Fallback Tools<br/>Alternative flow"]
+        end
+        
+        subgraph "Data Collection"
+            Tools["Tool Workers<br/>─────"]
+            Web["Web Search<br/>Google API"]
+            GH["GitHub API<br/>PyGithub"]
+            Docs["Official Docs<br/>BeautifulSoup"]
+            Extract["Semantic Extract<br/>spaCy NLP"]
+            Calc["Calculator<br/>Python eval"]
+        end
+        
+        QA --> QA1
+        QA1 --> QA2
+        QA2 --> QA3
+        QA3 --> Cache
+        
+        Cache --> Cache1
+        Cache1 --> Cache2
+        Cache2 --> Cache3
+        
+        Cache3 -->|Hit| ReturnCached
+        Cache3 -->|Miss/Partial| Planner
+        
+        Planner --> Planner1
+        Planner1 --> Planner2
+        Planner2 --> Planner3
+        Planner3 --> Selector
+        
+        Selector --> Selector1
+        Selector1 --> Selector2
+        Selector2 --> Selector3
+        Selector3 --> Executor
+        
+        Executor --> Executor1
+        Executor1 --> Executor2
+        Executor2 --> Executor3
+        Executor3 --> Executor4
+        Executor4 --> Tools
+        
+        Tools --> Web
+        Tools --> GH
+        Tools --> Docs
+        Tools --> Extract
+        Tools --> Calc
+    end
+    
+    subgraph "📊 Processing Pipeline"
+        Collector["Evidence Collector<br/>─────<br/>Normalize results"]
+        Builder["Graph Builder<br/>─────<br/>NetworkX DiGraph"]
+        Builder1["Add Nodes"]
+        Builder2["Add Edges"]
+        Builder3["Conflict Detection"]
+        Builder4["Update Freshness"]
+        
+        Verifier["Claim Verifier<br/>─────<br/>Verify + Score"]
+        Verifier1["Extract Claims"]
+        Verifier2["Map Evidence"]
+        Verifier3["Score Confidence<br/>0.0 - 1.0"]
+        
+        Web --> Collector
+        GH --> Collector
+        Docs --> Collector
+        Extract --> Collector
+        Calc --> Collector
+        
+        Collector --> Builder
+        Builder --> Builder1
+        Builder1 --> Builder2
+        Builder2 --> Builder3
+        Builder3 -->|No Conflict| Builder4
+        Builder3 -->|Conflict| Reverify["Re-verify from<br/>Authoritative<br/>Source"]
+        Reverify -->|New Evidence| Builder4
+        
+        Builder4 --> Verifier
+        Verifier --> Verifier1
+        Verifier1 --> Verifier2
+        Verifier2 --> Verifier3
+    end
+    
+    subgraph "💾 Data Layer"
+        KG["Knowledge Graph<br/>─────<br/>NetworkX DiGraph<br/>Persistent"]
+        KG1["Nodes<br/>Entities + metadata"]
+        KG2["Edges<br/>Relationships<br/>+ confidence"]
+        KG3["Conflict Log<br/>Detected issues"]
+        
+        Redis["Redis Cache<br/>─────<br/>Query embeddings<br/>Result subgraphs"]
+        Redis1["Query Cache<br/>TTL: 24h"]
+        Redis2["Graph Cache<br/>Partial hits"]
+        
+        Traces["Trace Store<br/>─────<br/>JSON Lines<br/>Local disk"]
+        Traces1["Event Log<br/>Every decision"]
+        Traces2["Metrics<br/>Computed KPIs"]
+        
+        KG --> KG1
+        KG1 --> KG2
+        KG2 --> KG3
+        
+        Redis --> Redis1
+        Redis1 --> Redis2
+        
+        Traces --> Traces1
+        Traces1 --> Traces2
+    end
+    
+    subgraph "📈 Monitoring & Output"
+        Reporter["Report Generator<br/>─────"]
+        Reporter1["JSON Report"]
+        Reporter2["Markdown Report"]
+        Reporter3["Evidence Mapping"]
+        
+        Tracer["Trace System<br/>─────<br/>Record all events"]
+        Tracer1["Event Recording"]
+        Tracer2["Metric Computation"]
+        Tracer3["Trace Export"]
+        
+        Dashboard["Monitoring Dashboard<br/>─────<br/>Streamlit"]
+        Dashboard1["Cache Hit Rate"]
+        Dashboard2["Tool Success Rate"]
+        Dashboard3["Recovery Rate"]
+        Dashboard4["Graph Coverage"]
+        
+        Reporter --> Reporter1
+        Reporter1 --> Reporter2
+        Reporter2 --> Reporter3
+        
+        Verifier3 --> Reporter
+        
+        Reporter --> Tracer
+        Tracer --> Tracer1
+        Tracer1 --> Tracer2
+        Tracer2 --> Tracer3
+        
+        Tracer3 --> Dashboard
+        Dashboard --> Dashboard1
+        Dashboard1 --> Dashboard2
+        Dashboard2 --> Dashboard3
+        Dashboard3 --> Dashboard4
+        
+        Tracer3 -->|Store Result<br/>Embedding| Cache
+        
+        Reporter1 --> ReturnCached["Return to User"]
+    end
+    
+    subgraph "🔄 External Services"
+        GoogleAPI["Google Search API<br/>100 queries/day<br/>Timeout: 5s"]
+        GitHubAPI["GitHub API<br/>5000/hr auth<br/>Timeout: 3s"]
+        HuggingFace["HuggingFace<br/>Sentence Transformers<br/>all-MiniLM-L6-v2"]
+    end
+    
+    Web -.->|API Call| GoogleAPI
+    GH -.->|API Call| GitHubAPI
+    QA3 -.->|Download Model| HuggingFace
+    
+    ReturnCached --> FinalOutput["✅ Final Output<br/>JSON + Markdown<br/>Execution Trace"]
+    FinalOutput --> CLI
+    FinalOutput --> API
+    FinalOutput --> UI
+    
+    style CLI fill:#e3f2fd
+    style API fill:#e3f2fd
+    style UI fill:#e3f2fd
+    
+    style QA fill:#fff3e0
+    style Cache fill:#f3e5f5
+    style Planner fill:#fff3e0
+    style Selector fill:#f3e5f5
+    style Executor fill:#ffe0b2
+    style Tools fill:#ffccbc
+    
+    style Collector fill:#fff3e0
+    style Builder fill:#f3e5f5
+    style Verifier fill:#fff3e0
+    
+    style KG fill:#e8f5e9
+    style Redis fill:#e8f5e9
+    style Traces fill:#e8f5e9
+    
+    style Reporter fill:#e1f5ff
+    style Tracer fill:#f3e5f5
+    style Dashboard fill:#c8e6c9
+    
+    style GoogleAPI fill:#fce4ec
+    style GitHubAPI fill:#fce4ec
+    style HuggingFace fill:#fce4ec
+    
+    style FinalOutput fill:#e1f5ff
+    style ReturnCached fill:#e8f5e9
+    style Reverify fill:#ffebee

@@ -1,0 +1,179 @@
+graph TD
+    subgraph "Failure Type 1: TIMEOUT"
+        FT1["Tool Call:<br/>Web Search<br/>Query: vLLM GPU"]
+        FT1Execute["Execute<br/>Timeout: 5000ms"]
+        FT1Fail["⏱️ TIMEOUT<br/>5000ms exceeded<br/>No response"]
+        FT1Detect["Detect<br/>Failure<br/>Latency > threshold"]
+        FT1Retry["Retry Attempt 1<br/>Backoff: 1s"]
+        FT1Retry2["Retry Attempt 2<br/>Backoff: 2s"]
+        FT1Retry3["Retry Attempt 3<br/>Backoff: 4s"]
+        FT1Success["✅ SUCCESS<br/>Retrieved 5 results"]
+        FT1Fallback["If all retries fail:<br/>Use Fallback Tool<br/>GitHub API"]
+        FT1Trace["📝 Trace Event<br/>TIMEOUT<br/>Retries: 2<br/>Recovery: SUCCESS"]
+        
+        FT1 --> FT1Execute
+        FT1Execute --> FT1Fail
+        FT1Fail --> FT1Detect
+        FT1Detect --> FT1Retry
+        FT1Retry -->|After 1s| FT1Retry2
+        FT1Retry2 -->|After 2s| FT1Retry3
+        FT1Retry3 -->|After 4s| FT1Success
+        FT1Success --> FT1Trace
+        FT1Detect -.->|If all retries fail| FT1Fallback
+    end
+    
+    subgraph "Failure Type 2: MALFORMED JSON"
+        FT2["Tool Call:<br/>GitHub API<br/>Get repo stats"]
+        FT2Execute["Execute<br/>Receive response"]
+        FT2Bad["❌ MALFORMED<br/>Invalid JSON<br/>Parse error"]
+        FT2Validate["Validate<br/>Against Schema"]
+        FT2Fail["Schema Validation:<br/>FAILED"]
+        FT2Retry["Attempt to<br/>re-request"]
+        FT2Fallback2["Fallback Tool:<br/>Official Docs<br/>Parse webpage"]
+        FT2Success2["✅ SUCCESS<br/>Retrieved metadata"]
+        FT2Trace2["📝 Trace Event<br/>MALFORMED_JSON<br/>Fallback used<br/>Recovery: SUCCESS"]
+        
+        FT2 --> FT2Execute
+        FT2Execute --> FT2Bad
+        FT2Bad --> FT2Validate
+        FT2Validate --> FT2Fail
+        FT2Fail --> FT2Retry
+        FT2Retry -->|Retry fails| FT2Fallback2
+        FT2Fallback2 --> FT2Success2
+        FT2Success2 --> FT2Trace2
+    end
+    
+    subgraph "Failure Type 3: EMPTY RESULT"
+        FT3["Tool Call:<br/>Web Search<br/>Query: very specific"]
+        FT3Execute3["Execute<br/>Receive response"]
+        FT3Empty["📭 EMPTY RESULT<br/>0 results returned"]
+        FT3Detect3["Detect<br/>Empty results"]
+        FT3Reformulate["Reformulate<br/>Query<br/>Broaden search"]
+        FT3NewQuery["New Query:<br/>Less specific<br/>More general"]
+        FT3RetryEmpty["Re-search<br/>with new query"]
+        FT3Found["✅ Found 3 results<br/>Partial match<br/>to original"]
+        FT3Trace3["📝 Trace Event<br/>EMPTY_RESULT<br/>Query reformulated<br/>Recovery: SUCCESS"]
+        
+        FT3 --> FT3Execute3
+        FT3Execute3 --> FT3Empty
+        FT3Empty --> FT3Detect3
+        FT3Detect3 --> FT3Reformulate
+        FT3Reformulate --> FT3NewQuery
+        FT3NewQuery --> FT3RetryEmpty
+        FT3RetryEmpty --> FT3Found
+        FT3Found --> FT3Trace3
+    end
+    
+    subgraph "Failure Type 4: RATE LIMIT"
+        FT4["Tool Call:<br/>Web Search<br/>10th search"]
+        FT4Execute4["Execute"]
+        FT4RateLimit["🚫 RATE LIMIT<br/>HTTP 429<br/>100 queries/day<br/>exceeded"]
+        FT4Detect4["Detect<br/>HTTP 429"]
+        FT4Wait["Wait 60s<br/>Exponential<br/>backoff"]
+        FT4Retry4["Retry after<br/>cooldown"]
+        FT4Success4["✅ SUCCESS<br/>Retrieved results"]
+        FT4Fallback4["If still limited:<br/>Use alternative<br/>search engine"]
+        FT4Trace4["📝 Trace Event<br/>RATE_LIMIT<br/>Waited 60s<br/>Recovery: SUCCESS"]
+        
+        FT4 --> FT4Execute4
+        FT4Execute4 --> FT4RateLimit
+        FT4RateLimit --> FT4Detect4
+        FT4Detect4 --> FT4Wait
+        FT4Wait --> FT4Retry4
+        FT4Retry4 --> FT4Success4
+        FT4Success4 --> FT4Trace4
+        FT4Detect4 -.->|If quota exhausted| FT4Fallback4
+    end
+    
+    subgraph "Failure Type 5: CONFLICTING EVIDENCE"
+        FT5["Claim:<br/>Ollama VRAM<br/>requirement"]
+        FT5Source1["Source A:<br/>GitHub README<br/>8 GB VRAM"]
+        FT5Source2["Source B:<br/>Official Blog<br/>4 GB VRAM"]
+        FT5Conflict["🔥 CONFLICT<br/>Sources disagree<br/>8GB vs 4GB"]
+        FT5Detect5["Detect<br/>Conflicting edges<br/>in graph"]
+        FT5Verify["Trigger<br/>Verification<br/>Find authoritative<br/>source"]
+        FT5Official["Source C:<br/>Official Docs<br/>Official version<br/>4 GB minimum"]
+        FT5Resolve["✅ RESOLVED<br/>Accept 4GB<br/>Mark official<br/>as authoritative"]
+        FT5Update["Update Graph<br/>Edge weight: 0.95<br/>Mark conflict<br/>as resolved"]
+        FT5Trace5["📝 Trace Event<br/>CONFLICT_DETECTED<br/>Reverified<br/>Resolution: OFFICIAL"]
+        
+        FT5 --> FT5Source1
+        FT5 --> FT5Source2
+        FT5Source1 --> FT5Conflict
+        FT5Source2 --> FT5Conflict
+        FT5Conflict --> FT5Detect5
+        FT5Detect5 --> FT5Verify
+        FT5Verify --> FT5Official
+        FT5Official --> FT5Resolve
+        FT5Resolve --> FT5Update
+        FT5Update --> FT5Trace5
+    end
+    
+    subgraph "📊 Aggregate Recovery Metrics"
+        Metrics["After Test Run<br/>with Fault Injection"]
+        M1["Total Faults Injected: 5"]
+        M2["Total Detected: 5"]
+        M3["Successfully Recovered: 5"]
+        M4["Recovery Rate: 100%"]
+        M5["Mean Recovery Time: 2.1s"]
+        M6["Max Recovery Time: 4.2s"]
+        M7["User Impact: NONE<br/>All queries completed"]
+        
+        Metrics --> M1
+        M1 --> M2
+        M2 --> M3
+        M3 --> M4
+        M4 --> M5
+        M5 --> M6
+        M6 --> M7
+    end
+    
+    subgraph "🔍 Observability"
+        Trace1["Each Failure<br/>Recorded in Trace"]
+        Trace2["Trace Entry<br/>─────<br/>trace_id: TR-0042-003<br/>event_type: timeout<br/>tool: web_search<br/>retry_count: 2<br/>recovery_status: success<br/>latency_ms: 3100"]
+        Trace3["Traces Aggregated<br/>For Analysis"]
+        Trace4["Dashboard Shows<br/>─────<br/>Tool Reliability<br/>Recovery Trends<br/>Failure Patterns"]
+        
+        Trace1 --> Trace2
+        Trace2 --> Trace3
+        Trace3 --> Trace4
+    end
+    
+    FT1Trace --> Metrics
+    FT2Trace2 --> Metrics
+    FT3Trace3 --> Metrics
+    FT4Trace4 --> Metrics
+    FT5Trace5 --> Metrics
+    
+    Metrics --> Trace1
+    
+    style FT1Fail fill:#ffebee
+    style FT1Detect fill:#fff3e0
+    style FT1Success fill:#e8f5e9
+    style FT1Trace fill:#f3e5f5
+    
+    style FT2Bad fill:#ffebee
+    style FT2Fail fill:#fff3e0
+    style FT2Success2 fill:#e8f5e9
+    style FT2Trace2 fill:#f3e5f5
+    
+    style FT3Empty fill:#ffebee
+    style FT3Reformulate fill:#fff3e0
+    style FT3Found fill:#e8f5e9
+    style FT3Trace3 fill:#f3e5f5
+    
+    style FT4RateLimit fill:#ffebee
+    style FT4Wait fill:#fff3e0
+    style FT4Success4 fill:#e8f5e9
+    style FT4Trace4 fill:#f3e5f5
+    
+    style FT5Conflict fill:#ffebee
+    style FT5Verify fill:#fff3e0
+    style FT5Resolve fill:#e8f5e9
+    style FT5Trace5 fill:#f3e5f5
+    
+    style Metrics fill:#e3f2fd
+    style M4 fill:#c8e6c9
+    style M7 fill:#c8e6c9
+    
+    style Trace4 fill:#b3e5fc

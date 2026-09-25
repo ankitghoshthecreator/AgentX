@@ -1,0 +1,72 @@
+graph TD
+    User["👤 User Query<br/>Natural Language Input"]
+    
+    User -->|"Compare vLLM and Ollama"| QA["<b>Query Analyzer</b><br/>─────────────<br/>• Extract entities<br/>• Extract relationships<br/>• Generate embeddings<br/>• Estimate complexity"]
+    
+    QA -->|"Query Representation<br/>+ Embedding"| Cache["<b>Semantic Cache</b><br/>─────────────<br/>• Cosine similarity<br/>• Threshold: 0.75<br/>• TTL by entity type<br/>• Hit/Miss/Partial"]
+    
+    Cache -->|"CACHE HIT"| CacheReturn["<b>Return Cached<br/>Subgraph</b><br/>─────────────<br/>• Nodes: 8<br/>• Edges: 14<br/>• Latency: 50ms<br/>• Report Generated"]
+    
+    Cache -->|"CACHE MISS/<br/>PARTIAL"| Planner["<b>Query Planner</b><br/>─────────────<br/>ADK Agent<br/>• Decompose goal<br/>• Create task DAG<br/>• Identify deps<br/>• Estimate costs"]
+    
+    Planner -->|"Task DAG<br/>with dependencies"| Selector["<b>Tool Selector</b><br/>─────────────<br/>Policy Model<br/>• Predict utility<br/>• Score each tool<br/>• Recommend tools<br/>• Skip low-score"]
+    
+    Selector -->|"Prioritized<br/>Tool List"| Executor["<b>Task Executor</b><br/>─────────────<br/>• Parallel execution<br/>• Timeout handling<br/>• Retry w/ backoff<br/>• Fallback tools<br/>• Fault injection"]
+    
+    Executor -->|"Web Search<br/>5000ms timeout"| WebSearch["🔍 Web Search<br/>Tool<br/>─────────────<br/>Google API<br/>Returns: snippets<br/>URLs, metadata"]
+    
+    Executor -->|"GitHub API<br/>3000ms timeout"| GitHub["🐙 GitHub API<br/>Tool<br/>─────────────<br/>Repo metadata<br/>Releases, activity<br/>Language stats"]
+    
+    Executor -->|"Parse docs<br/>4000ms timeout"| OfficialDocs["📚 Official Docs<br/>Tool<br/>─────────────<br/>Parse websites<br/>Extract structured<br/>data"]
+    
+    Executor -->|"Extract from text<br/>500ms"| SemanticExtract["🧠 Semantic Extract<br/>Tool<br/>─────────────<br/>NLP processing<br/>Named entities<br/>Relationships"]
+    
+    Executor -->|"Evaluate expr<br/>100ms"| Calc["🧮 Calculator<br/>Tool<br/>─────────────<br/>Math operations<br/>Comparisons<br/>Metrics"]
+    
+    WebSearch -->|"Tool Results<br/>+ Metadata"| Collector["<b>Evidence Collector</b><br/>─────────────<br/>• Normalize results<br/>• Validate schemas<br/>• Assign confidence<br/>• Link to sources"]
+    
+    GitHub --> Collector
+    OfficialDocs --> Collector
+    SemanticExtract --> Collector
+    Calc --> Collector
+    
+    Collector -->|"Normalized<br/>Evidence"| GraphBuilder["<b>Knowledge Graph<br/>Builder</b><br/>─────────────<br/>NetworkX DiGraph<br/>• Add nodes<br/>• Add edges<br/>• Detect conflicts<br/>• Update freshness"]
+    
+    GraphBuilder -->|"No Conflict"| Verifier["<b>Claim Verifier</b><br/>─────────────<br/>• Extract claims<br/>• Map evidence<br/>• Score confidence<br/>• Mark verified"]
+    
+    GraphBuilder -->|"Conflict<br/>Detected"| ReSearch["<b>Conflict Handler</b><br/>─────────────<br/>• Identify conflict<br/>• Query authoritative<br/>source<br/>• Re-verify"]
+    
+    ReSearch -->|"Additional<br/>Evidence"| Verifier
+    
+    Verifier -->|"Verified Claims<br/>+ Evidence"| Reporter["<b>Report Generator</b><br/>─────────────<br/>• Generate JSON<br/>• Generate Markdown<br/>• Create visualization<br/>• Map citations"]
+    
+    Reporter -->|"Structured<br/>Report"| Tracer["<b>Trace & Monitoring</b><br/>─────────────<br/>• Record all events<br/>• Compute metrics<br/>• Export traces<br/>• Update cache"]
+    
+    Tracer -->|"Store Result<br/>Embedding +<br/>Subgraph"| Cache
+    
+    Tracer -->|"JSON Report<br/>Markdown<br/>Execution Log"| FinalOutput["✅ User Report<br/>─────────────<br/>• Structured answer<br/>• Evidence mapping<br/>• Freshness score<br/>• Execution trace"]
+    
+    Tracer -->|"Metrics & Traces<br/>Real-time"| Dashboard["📊 Monitoring Dashboard<br/>─────────────<br/>• Cache hit rate<br/>• Tool success rate<br/>• Recovery rate<br/>• Graph coverage"]
+    
+    FinalOutput --> User
+    
+    style User fill:#e1f5ff
+    style QA fill:#fff3e0
+    style Cache fill:#f3e5f5
+    style CacheReturn fill:#e8f5e9
+    style Planner fill:#fff3e0
+    style Selector fill:#f3e5f5
+    style Executor fill:#ffe0b2
+    style WebSearch fill:#ffccbc
+    style GitHub fill:#ffccbc
+    style OfficialDocs fill:#ffccbc
+    style SemanticExtract fill:#ffccbc
+    style Calc fill:#ffccbc
+    style Collector fill:#fff3e0
+    style GraphBuilder fill:#f3e5f5
+    style Verifier fill:#fff3e0
+    style ReSearch fill:#ffebee
+    style Reporter fill:#e8f5e9
+    style Tracer fill:#f3e5f5
+    style FinalOutput fill:#e1f5ff
+    style Dashboard fill:#c8e6c9

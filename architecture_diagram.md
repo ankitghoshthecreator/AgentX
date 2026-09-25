@@ -1,43 +1,52 @@
-# Agent-as-Database: Architecture Diagram
+# Architecture Diagram: Agent-as-Database
 
-Below is the Mermaid architecture diagram for the **Agent-as-Database: Semantic Knowledge Graph Query Engine**.
+The following diagram illustrates the data flow and core components of the Agent-as-Database system:
 
 ```mermaid
-flowchart TD
-    UserQuery(["User Query\n(e.g., 'Compare vLLM and Ollama on GPU support')"]) --> Analyzer["Query Analyzer\n(Extract entities, relationships, embedding)"]
+graph TD
+    User([User Query]) --> Analyzer[Query Analyzer]
     
-    Analyzer --> CacheLookup{"Semantic Cache Lookup\n(Similarity > 0.75?)"}
+    Analyzer --> |Extract Entities & Embeddings| Cache[(Semantic Cache)]
     
-    CacheLookup -- "Hit (Full)" --> CacheResult["Return Cached Subgraph"]
-    CacheResult --> EndProcess(["Return Result to User"])
+    Cache -->|Hit > Threshold| CacheHit[Return Cached Subgraph]
+    Cache -->|Miss / Partial| Planner[Query Planner]
     
-    CacheLookup -- "Miss / Partial Hit" --> Planner["Query Planner (ADK)\n(Generate task DAG)"]
+    Planner -->|Generate Task DAG| Selector[Tool Selector]
     
-    Planner --> ToolSelector["Adaptive Tool Selection\n(Policy Model predicts tool utility)"]
+    Selector -->|ML Policy Predictions| Executor[Task Executor]
     
-    ToolSelector --> Executor["Task Executor\n(Parallel with timeout, retry, fault injection)"]
+    Executor -->|Tool 1: Web Search| Worker1(Worker)
+    Executor -->|Tool 2: GitHub API| Worker2(Worker)
+    Executor -->|Tool 3: Extract| Worker3(Worker)
     
-    subgraph Execution Pipeline
-        Executor --> Tool1["Web Search"]
-        Executor --> Tool2["GitHub API"]
-        Executor --> Tool3["Official Docs"]
-        Executor --> Tool4["Semantic Extract"]
-    end
+    Worker1 --> Builder[Graph Builder]
+    Worker2 --> Builder
+    Worker3 --> Builder
     
-    Tool1 & Tool2 & Tool3 & Tool4 --> Collector["Evidence Collector\n(Normalize & validate results)"]
+    Builder -->|Insert Nodes/Edges| NetworkX[(Knowledge Graph)]
     
-    Collector --> GraphBuilder{"Knowledge Graph Builder\n(Update Nodes/Edges)"}
+    Builder --> |Detect Conflicts| Verifier[Claim Verifier]
     
-    GraphBuilder -- "Conflict Detected" --> Verifier["Claim Verifier\n(Resolve conflicts & re-search)"]
-    Verifier --> InferenceEngine
+    Verifier -->|Resolve & Score| Reporter[Report Generator]
+    CacheHit --> Reporter
     
-    GraphBuilder -- "No Conflict" --> InferenceEngine["Inference Engine\n(Query path, aggregate, rank answers)"]
+    Reporter -->|Cache Miss/Partial| CacheStore[Store New Subgraph to Cache]
+    CacheStore --> Cache
     
-    InferenceEngine --> CacheStore["Semantic Cache\n(Store embedding, subgraph, TTL)"]
+    Reporter --> JSON[JSON Report]
+    Reporter --> MD[Markdown Report]
     
-    CacheStore --> ReportGen["Report Generator\n(JSON, Markdown, Freshness Score)"]
-    
-    ReportGen --> Monitoring["Trace & Monitoring System\n(Record metrics, tool success, coverage)"]
-    
-    Monitoring --> EndProcess
+    Analyzer -.-> |Log Event| Tracer{{Tracer / Telemetry}}
+    Cache -.-> |Log Hit/Miss| Tracer
+    Planner -.-> |Log DAG| Tracer
+    Executor -.-> |Log Failures/Retries| Tracer
+    Builder -.-> |Log Conflicts| Tracer
 ```
+
+### Component Details
+- **Query Analyzer**: Uses SpaCy for NLP extraction and sentence-transformers for vector embeddings.
+- **Semantic Cache**: Redis-backed cache that matches identical semantic intents using cosine similarity (e.g. `Similarity > 0.75`).
+- **Query Planner**: Decomposes intents into an acyclic graph of actionable tool requests.
+- **Task Executor**: A robust tool runner that implements exponential backoff, fault-injection, and fallback strategies.
+- **Knowledge Graph**: A `NetworkX` directed graph that tracks entity relationships and monitors edge-level contradictions.
+- **Tracer**: Observability module logging structured telemetry for cache hit rates and system performance monitoring.

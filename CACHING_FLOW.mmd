@@ -1,0 +1,105 @@
+graph LR
+    subgraph "Query 1: CACHE MISS"
+        Q1["Query 1:<br/>Compare LLM<br/>frameworks"]
+        Q1Embed["Generate<br/>Embedding"]
+        Q1Lookup["Semantic<br/>Cache<br/>Lookup"]
+        Q1Miss["MISS<br/>No similar<br/>queries"]
+        Q1Plan["Generate<br/>Task Plan"]
+        Q1Exec["Execute<br/>Tasks<br/>15 API calls"]
+        Q1Build["Build<br/>Knowledge<br/>Graph<br/>12 nodes<br/>18 edges"]
+        Q1Report["Generate<br/>Report"]
+        Q1Cache["Store in Cache<br/>Embedding +<br/>Subgraph<br/>TTL: 24h"]
+        Q1Time["Time: 3.0s"]
+        
+        Q1 --> Q1Embed
+        Q1Embed --> Q1Lookup
+        Q1Lookup --> Q1Miss
+        Q1Miss --> Q1Plan
+        Q1Plan --> Q1Exec
+        Q1Exec --> Q1Build
+        Q1Build --> Q1Report
+        Q1Report --> Q1Cache
+        Q1Report --> Q1Time
+    end
+    
+    subgraph "Query 2: CACHE HIT - Full"
+        Q2["Query 2:<br/>Same query<br/>again"]
+        Q2Embed["Generate<br/>Embedding<br/>Same as Q1"]
+        Q2Lookup["Semantic<br/>Cache<br/>Lookup"]
+        Q2Hit["HIT<br/>Similarity:<br/>0.99"]
+        Q2Return["Return Cached<br/>Subgraph<br/>12 nodes<br/>18 edges"]
+        Q2Time["Time: 0.05s<br/>60x faster"]
+        
+        Q2 --> Q2Embed
+        Q2Embed --> Q2Lookup
+        Q2Lookup --> Q2Hit
+        Q2Hit --> Q2Return
+        Q2Return --> Q2Time
+    end
+    
+    subgraph "Query 3: CACHE HIT - Partial"
+        Q3["Query 3:<br/>What GPU<br/>does Ollama<br/>support?"]
+        Q3Embed["Generate<br/>Embedding"]
+        Q3Lookup["Semantic<br/>Cache<br/>Lookup"]
+        Q3Partial["PARTIAL HIT<br/>Similarity:<br/>0.89"]
+        Q3Reuse["Reuse 80%<br/>of Graph<br/>8 nodes<br/>14 edges"]
+        Q3Gap["Identify<br/>Missing<br/>Edges"]
+        Q3Search["Targeted<br/>Search<br/>2 API calls"]
+        Q3Update["Add New<br/>Edges to<br/>Graph"]
+        Q3Report2["Generate<br/>Report"]
+        Q3Time["Time: 1.3s<br/>60% faster"]
+        
+        Q3 --> Q3Embed
+        Q3Embed --> Q3Lookup
+        Q3Lookup --> Q3Partial
+        Q3Partial --> Q3Reuse
+        Q3Reuse --> Q3Gap
+        Q3Gap --> Q3Search
+        Q3Search --> Q3Update
+        Q3Update --> Q3Report2
+        Q3Report2 --> Q3Time
+    end
+    
+    subgraph "Knowledge Graph State"
+        KG_Init["After Q1:<br/>12 nodes<br/>18 edges<br/>0 conflicts"]
+        KG_Final["After Q3:<br/>14 nodes<br/>22 edges<br/>0 conflicts"]
+        
+        KG_Init -.->|Add edges| KG_Final
+    end
+    
+    subgraph "Cache Impact Analysis"
+        Q1Cache -->|Embedding stored| CacheMemory["Cache Entry<br/>─────<br/>Embedding: 768d<br/>Subgraph: JSON<br/>Freshness: Sep 24<br/>TTL: 24h<br/>Hit Count: 2"]
+        
+        CacheMemory -->|Lookup on Q2| CacheHit["Full Hit<br/>Saved: 3.0s<br/>Avoided: 15 API calls<br/>Cost avoided: $0.015"]
+        
+        CacheMemory -->|Lookup on Q3| CachePartial["Partial Hit<br/>Saved: 1.7s<br/>Avoided: 13 API calls<br/>Cost avoided: $0.013"]
+        
+        CacheHit --> TotalSaved["Total After 3 Queries:<br/>─────<br/>Time saved: 4.7s<br/>API calls avoided: 28<br/>Cost avoided: $0.028<br/>Cache efficiency: 65%"]
+        
+        CachePartial --> TotalSaved
+    end
+    
+    Q1Time -.->|Stored| CacheMemory
+    Q2Time -.->|Retrieved| CacheHit
+    Q3Time -.->|Retrieved| CachePartial
+    
+    Q1Build -.->|Populate| KG_Init
+    Q3Update -.->|Add edges| KG_Final
+    
+    style Q1 fill:#ffe0b2
+    style Q1Time fill:#ffccbc
+    style Q1Cache fill:#fff3e0
+    
+    style Q2 fill:#c8e6c9
+    style Q2Time fill:#a5d6a7
+    
+    style Q3 fill:#b3e5fc
+    style Q3Time fill:#81d4fa
+    
+    style KG_Init fill:#e1f5fe
+    style KG_Final fill:#b3e5fc
+    
+    style CacheMemory fill:#f3e5f5
+    style CacheHit fill:#e8f5e9
+    style CachePartial fill:#e8f5e9
+    style TotalSaved fill:#c8e6c9

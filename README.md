@@ -1,3 +1,4 @@
+# Agent-as-Database: Semantic Knowledge Graph Query Engine
 
 An autonomous research agent that decomposes technical queries into semantic graph operations and fact-finding tasks, maintains knowledge through persistent semantic embeddings with TTL-based caching, detects and resolves conflicting information, and reports query freshness and graph coverage.
 
@@ -216,6 +217,8 @@ Agent-as-Database treats agent execution as **graph construction and querying**:
 
 ```bash
 # Clone repository
+git clone https://github.com/yourusername/agent-as-database.git
+cd agent-as-database
 
 # Create virtual environment
 python -m venv venv
@@ -1590,6 +1593,3 @@ For questions about the project architecture, reach out via:
 
 **Project Built By**: Ankit (B.Tech AI Student, SRM IST)  
 **Last Updated**: September 24, 2026
-#   A g e n t X 
- 
- 
